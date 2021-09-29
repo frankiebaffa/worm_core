@@ -1,4 +1,0 @@
-[submodule "worm_derive"]
-	path = worm_derive
-	url = https://github.com/frankiebaffa/worm_derive
-	branch = master
