@@ -4,5 +4,4 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-worm_derive = { path = "./worm_derive" }
 rusqlite = { version = "0.25", features = [ "bundled", "chrono" ] }
