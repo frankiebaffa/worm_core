@@ -6,6 +6,5 @@ _ _ _
 
 ## Procedural Macros
 
-Proc macros support can be added with [wORM Derive](https://github.com/frankiebaffa/worm_derive).
-
+Procedural macro support can be added with [wORM Derive](https://github.com/frankiebaffa/worm_derive).
 
