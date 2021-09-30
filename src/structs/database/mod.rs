@@ -10,13 +10,6 @@ impl DbObject {
     pub fn new<'a>(path: &'a str, name: &'a str) -> DbObject {
         return DbObject { path: path.to_string(), name: name.to_string(), };
     }
-    pub fn get_db_file_path(&self) -> String {
-        if self.path.ends_with("/") {
-            return format!("{}{}.db", self.path, self.name);
-        } else {
-            return format!("{}/{}.db", self.path, self.name);
-        }
-    }
 }
 pub struct DbContext {
     connection: Connection,
@@ -29,16 +22,22 @@ impl DbContext {
     pub fn use_connection(&mut self) -> &mut Connection {
         return &mut self.connection;
     }
-    pub fn attach_temp_dbs(self) -> Result<(), Error> {
-        for db in self.databases {
-            self.connection.execute(&format!("attach ':memory:' as {}", db.name), [])?;
-        }
+    pub fn attach_temp_dbs(&mut self) -> Result<(), Error> {
+        self.databases.iter().for_each(|db| {
+            match self.connection.execute(&format!("attach ':memory:' as {}", db.name), []) {
+                Ok(_) => {},
+                Err(e) => panic!("{}", e),
+            }
+        });
         return Ok(());
     }
-    pub fn attach_dbs(self) -> Result<(), Error> {
-        for db in self.databases {
-            self.connection.execute(&format!("attach '{}' as {}", db.get_db_file_path(), db.name), [])?;
-        }
+    pub fn attach_dbs(&mut self) -> Result<(), Error> {
+        self.databases.iter().for_each(|db| {
+            match self.connection.execute(&format!("attach '{}' as {}", db.path, db.name), []) {
+                Ok(_) => {},
+                Err(e) => panic!("{}", e),
+            }
+        });
         return Ok(());
     }
 }
