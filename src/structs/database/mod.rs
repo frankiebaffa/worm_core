@@ -1,7 +1,4 @@
-use rusqlite::{
-    Connection,
-    Error,
-};
+use rusqlite::Connection;
 pub struct DbObject {
     path: String,
     name: String,
@@ -22,22 +19,20 @@ impl DbContext {
     pub fn use_connection(&mut self) -> &mut Connection {
         return &mut self.connection;
     }
-    pub fn attach_temp_dbs(&mut self) -> Result<(), Error> {
+    pub fn attach_temp_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
             match self.connection.execute(&format!("attach ':memory:' as {}", db.name), []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
             }
         });
-        return Ok(());
     }
-    pub fn attach_dbs(&mut self) -> Result<(), Error> {
+    pub fn attach_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
             match self.connection.execute(&format!("attach '{}' as {}", db.path, db.name), []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
             }
         });
-        return Ok(());
     }
 }
