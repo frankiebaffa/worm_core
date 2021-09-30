@@ -1,6 +1,6 @@
 # wORM
 
-A virtually Weightless Object Relational Mapper
+A light(w)eight (O)bject (R)elational (M)apper.
 
 _ _ _
 
