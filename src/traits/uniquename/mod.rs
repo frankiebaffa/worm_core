@@ -1,14 +1,20 @@
 use rusqlite::Connection;
-use crate::traits::dbmodel::DbModel;
-pub trait UniqueName: DbModel {
+use crate::traits::{
+    dbctx::DbCtx,
+    dbmodel::{
+        DbModel,
+        AttachedDbType,
+    },
+};
+pub trait UniqueName<T: DbCtx, A: AttachedDbType>: DbModel<T, A> {
     const NAME: &'static str;
     fn get_name(&self) -> String;
 }
-pub trait UniqueNameModel: UniqueName {
+pub trait UniqueNameModel<T: DbCtx, A: AttachedDbType>: UniqueName<T, A> {
     fn get_by_name_sql() -> String;
     fn get_by_name<'n>(c: &mut Connection, name: &'n str) -> Result<Self, rusqlite::Error>;
 }
-impl<T: UniqueName> UniqueNameModel for T {
+impl<U: DbCtx, A: AttachedDbType, T: UniqueName<U, A>> UniqueNameModel<U, A> for T {
     fn get_by_name_sql() -> String {
         return format!(
             "select {}.* from {} as {} where {}.{} = :name",
