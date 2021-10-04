@@ -12,7 +12,7 @@ pub trait ForeignKey<T: DbCtx, A: AttachedDbType, U: PrimaryKeyModel<T, A>>: Pri
 pub trait ForeignKeyModel<T: DbCtx, A: AttachedDbType, U: PrimaryKeyModel<T, A>>: ForeignKey<T, A, U> {
     fn get_all_by_fk_sql() -> String;
     fn get_fk_sql() -> String;
-    fn get_all_by_fk(db: &mut T, references: U) -> Result<Vec<Self>, Error>;
+    fn get_all_by_fk(db: &mut T, references: &U) -> Result<Vec<Self>, Error>;
     fn get_fk(&self, db: &mut T) -> Result<U, Error>;
 }
 impl<V: DbCtx, A: AttachedDbType, U: PrimaryKeyModel<V, A>, T: ForeignKey<V, A, U>> ForeignKeyModel<V, A, U> for T {
