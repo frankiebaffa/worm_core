@@ -28,7 +28,7 @@ impl<V: DbCtx, A: AttachedDbType, U: PrimaryKeyModel<V, A>, T: ForeignKey<V, A, 
             T::ALIAS, T::TABLE, T::ALIAS, U::TABLE, U::ALIAS, T::ALIAS, T::FOREIGN_KEY, U::ALIAS, U::PRIMARY_KEY, U::ALIAS, U::PRIMARY_KEY, T::FOREIGN_KEY_PARAM
         );
     }
-    fn get_all_by_fk(db: &mut V, references: U) -> Result<Vec<Self>, Error> {
+    fn get_all_by_fk(db: &mut V, references: &U) -> Result<Vec<Self>, Error> {
         let c = db.use_connection();
         let mut stmt = c.prepare(&Self::get_all_by_fk_sql())?;
         return stmt.query_map(&[(Self::FOREIGN_KEY_PARAM, &references.get_id())], |row| {
