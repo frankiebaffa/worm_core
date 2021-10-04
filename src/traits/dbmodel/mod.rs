@@ -13,3 +13,4 @@ pub trait DbModel<T: DbCtx, A: AttachedDbType>: Sized {
     fn from_row(row: &Row) -> Result<Self, Error>;
     fn get_attached_db_type() -> A;
 }
+
