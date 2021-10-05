@@ -3,16 +3,16 @@ use crate::traits::{
     primarykey::PrimaryKeyModel,
 };
 use rusqlite::Error;
-pub trait ForeignKey: PrimaryKeyModel {
+pub trait ForeignKey<U: PrimaryKeyModel>: PrimaryKeyModel {
     const FOREIGN_KEY: &'static str;
     const FOREIGN_KEY_PARAM: &'static str;
     fn get_fk_value(&self) -> i64;
 }
-pub trait ForeignKeyModel<U: PrimaryKeyModel>: ForeignKey {
+pub trait ForeignKeyModel<T: PrimaryKeyModel, U: PrimaryKeyModel>: ForeignKey<T> {
     fn get_all_by_fk(db: &mut impl DbCtx, references: &U) -> Result<Vec<Self>, Error>;
     fn get_fk(&self, db: &mut impl DbCtx) -> Result<U, Error>;
 }
-impl<T: ForeignKey, U: PrimaryKeyModel> ForeignKeyModel<U> for T {
+impl<S: PrimaryKeyModel, T: ForeignKey<S>, U: PrimaryKeyModel> ForeignKeyModel<S, U> for T {
     fn get_all_by_fk(db: &mut impl DbCtx, references: &U) -> Result<Vec<Self>, Error> {
         let sql = format!(
             "select {}.* from {} as {} where {}.{} = {};",
