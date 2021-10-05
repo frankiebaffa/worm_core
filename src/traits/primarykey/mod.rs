@@ -1,28 +1,22 @@
 use crate::traits::{
     dbctx::DbCtx,
-    dbmodel::{
-        AttachedDbType,
-        DbModel,
-    },
+    dbmodel::DbModel,
 };
-pub trait PrimaryKey<T: DbCtx, A: AttachedDbType>: DbModel<T, A> {
+pub trait PrimaryKey: DbModel {
     const PRIMARY_KEY: &'static str;
     fn get_id(&self) -> i64;
 }
-pub trait PrimaryKeyModel<T: DbCtx, A: AttachedDbType>: PrimaryKey<T, A> {
-    fn get_by_id_sql() -> String;
-    fn get_by_id(c: &mut T, id: i64) -> Result<Self, rusqlite::Error>;
+pub trait PrimaryKeyModel: PrimaryKey {
+    fn get_by_id(c: &mut impl DbCtx, id: i64) -> Result<Self, rusqlite::Error>;
 }
-impl<U: DbCtx, A: AttachedDbType, T: PrimaryKey<U, A>> PrimaryKeyModel<U, A> for T {
-    fn get_by_id_sql() -> String {
-        return format!(
+impl<T: PrimaryKey> PrimaryKeyModel for T {
+    fn get_by_id(db: &mut impl DbCtx, id: i64) -> Result<Self, rusqlite::Error> {
+        let sql = format!(
             "select {}.* from {} as {} where {}.{} = :id;",
             T::ALIAS, T::TABLE, T::ALIAS, T::ALIAS, T::PRIMARY_KEY
         );
-    }
-    fn get_by_id(db: &mut U, id: i64) -> Result<Self, rusqlite::Error> {
         let c = db.use_connection();
-        let mut stmt = c.prepare(&Self::get_by_id_sql())?;
+        let mut stmt = c.prepare(&sql)?;
         return stmt.query_row(&[(":id", &id)], |row| {
             Self::from_row(&row)
         });

@@ -1,27 +1,26 @@
 use crate::traits::{
     dbctx::DbCtx,
     activeflag::ActiveFlag,
-    dbmodel::AttachedDbType,
     helpers::ColumnValue,
 };
-pub trait UniqueName<T: DbCtx, A: AttachedDbType>: ActiveFlag<T, A> {
+pub trait UniqueName: ActiveFlag {
     const NAME: &'static str;
     fn get_name(&self) -> String;
 }
-pub trait UniqueNameModel<T: DbCtx, A: AttachedDbType>: UniqueName<T, A> {
+pub trait UniqueNameModel: UniqueName {
     fn get_by_name_sql() -> String;
-    fn get_by_name<'n>(c: &mut T, name: &'n str) -> Result<Self, rusqlite::Error>;
+    fn get_by_name<'n>(c: &mut impl DbCtx, name: &'n str) -> Result<Self, rusqlite::Error>;
     fn get_all_names_sql() -> String;
-    fn get_all_names(db: &mut T) -> Result<Vec<String>, rusqlite::Error>;
+    fn get_all_names(db: &mut impl DbCtx) -> Result<Vec<String>, rusqlite::Error>;
 }
-impl<U: DbCtx, A: AttachedDbType, T: UniqueName<U, A>> UniqueNameModel<U, A> for T {
+impl<T: UniqueName> UniqueNameModel for T {
     fn get_by_name_sql() -> String {
         return format!(
             "select {}.* from {}.{} as {} where {}.{} = :name",
             T::ALIAS, T::DB, T::TABLE, T::ALIAS, T::ALIAS, T::NAME
         );
     }
-    fn get_by_name<'n>(db: &mut U, name: &'n str) -> Result<Self, rusqlite::Error> {
+    fn get_by_name<'n>(db: &mut impl DbCtx, name: &'n str) -> Result<Self, rusqlite::Error> {
         let sql = T::get_by_name_sql();
         let c = db.use_connection();
         let mut stmt = c.prepare(&sql)?;
@@ -35,7 +34,7 @@ impl<U: DbCtx, A: AttachedDbType, T: UniqueName<U, A>> UniqueNameModel<U, A> for
             T::ALIAS, T::NAME, T::DB, T::TABLE, T::ALIAS, T::ALIAS, T::ACTIVE,
         );
     }
-    fn get_all_names(db: &mut U) -> Result<Vec<String>, rusqlite::Error> {
+    fn get_all_names(db: &mut impl DbCtx) -> Result<Vec<String>, rusqlite::Error> {
         let sql = Self::get_all_names_sql();
         let c = db.use_connection();
         let mut stmt = c.prepare(&sql)?;
