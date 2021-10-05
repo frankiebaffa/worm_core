@@ -16,8 +16,8 @@ pub trait PrimaryKeyModel<T: DbCtx, A: AttachedDbType>: PrimaryKey<T, A> {
 impl<U: DbCtx, A: AttachedDbType, T: PrimaryKey<U, A>> PrimaryKeyModel<U, A> for T {
     fn get_by_id_sql() -> String {
         return format!(
-            "select {}.* from {} as {} where {}.Id = :id;",
-            T::ALIAS, T::TABLE, T::ALIAS, T::ALIAS
+            "select {}.* from {} as {} where {}.{} = :id;",
+            T::ALIAS, T::TABLE, T::ALIAS, T::ALIAS, T::PRIMARY_KEY
         );
     }
     fn get_by_id(db: &mut U, id: i64) -> Result<Self, rusqlite::Error> {
