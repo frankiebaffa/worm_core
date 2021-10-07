@@ -1,4 +1,5 @@
 pub mod activeflag;
+pub mod activeflagfk;
 pub mod dbctx;
 pub mod dbmodel;
 pub mod primarykey;

@@ -16,9 +16,13 @@ pub trait ActiveFlagModel: ActiveFlag {
 }
 impl<T: ActiveFlag> ActiveFlagModel for T {
     fn get_all_active_sql() -> String {
-        return format!(
-            "select {}.* from {} as {} where {}.{} = 1;",
-            T::ALIAS, T::TABLE, T::ALIAS, T::ALIAS, T::ACTIVE
+        return format!("
+            select {}.*
+            from {}.{} as {}
+            where {}.{} = 1;",
+            T::ALIAS,
+            T::DB, T::TABLE, T::ALIAS,
+            T::ALIAS, T::ACTIVE
         );
     }
     fn get_all_active(db: &mut impl DbCtx) -> Result<Vec<T>, rusqlite::Error> {
@@ -29,9 +33,13 @@ impl<T: ActiveFlag> ActiveFlagModel for T {
         })?.into_iter().collect();
     }
     fn flip_active(&self, db: &mut impl DbCtx, active: bool) -> Result<Self, rusqlite::Error> {
-        let sql = format!(
-            "update {}.{} set {} = :active where {} = :id",
-            T::DB, T::TABLE, T::ACTIVE, T::PRIMARY_KEY,
+        let sql = format!("
+            update {}.{}
+            set {} = :active
+            where {} = :id",
+            T::DB, T::TABLE,
+            T::ACTIVE,
+            T::PRIMARY_KEY,
         );
         let id;
         {
