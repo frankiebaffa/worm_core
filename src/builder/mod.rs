@@ -4,18 +4,28 @@ use {
         foreignkey::ForeignKey,
         foreignkey::ForeignKeyModel,
     },
-    std::collections::HashMap,
+    std::{
+        collections::HashMap,
+        error::Error as StdError,
+        fmt::Display as StdDisplay,
+        fmt::Formatter as StdFormatter,
+        fmt::Result as FmtResult,
+    },
+    rusqlite::{
+        Error as SQLError,
+        ToSql,
+    }
 };
-trait WormErrorMatch<T, U: std::error::Error>: Sized {
+trait WormErrorMatch<T, U>: Sized where U: StdError {
     fn quick_match(self) -> Result<T, WormError>;
 }
 #[derive(Debug)]
 pub enum WormError {
     NoRowsError,
-    SQLError(rusqlite::Error),
+    SQLError(SQLError),
 }
-impl std::fmt::Display for WormError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl StdDisplay for WormError {
+    fn fmt(&self, f: &mut StdFormatter) -> FmtResult {
         match self {
             WormError::NoRowsError => {
                 write!(f, "No rows found!")
@@ -27,8 +37,8 @@ impl std::fmt::Display for WormError {
         }
     }
 }
-impl std::error::Error for WormError {}
-impl<T> WormErrorMatch<T, rusqlite::Error> for Result<T, rusqlite::Error> {
+impl StdError for WormError {}
+impl<T> WormErrorMatch<T, SQLError> for Result<T, SQLError> {
     fn quick_match(self) -> Result<T, WormError> {
         return match self {
             Ok(s) => Ok(s),
@@ -42,9 +52,9 @@ pub struct Query<'query, T> {
     join: Option<String>,
     clause: Option<String>,
     _value: Option<T>,
-    params: HashMap<String, Box<&'query dyn rusqlite::ToSql>>,
+    params: HashMap<String, Box<&'query dyn ToSql>>,
 }
-impl<'query, T: PrimaryKeyModel> Query<'query, T> {
+impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     pub fn select() -> Self {
         return Query {
             select: format!("select {}.*", T::ALIAS),
@@ -92,7 +102,12 @@ impl<'query, T: PrimaryKeyModel> Query<'query, T> {
         );
         return self;
     }
-    fn filter_join<'a, U: ForeignKey<T>>(mut self, op: &'a str, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    fn filter_join<'a, U>(
+        mut self,
+        op: &'a str,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         let join_str;
         let dlim;
         if self.join.is_none() {
@@ -113,25 +128,54 @@ impl<'query, T: PrimaryKeyModel> Query<'query, T> {
         );
         return self;
     }
-    pub fn join_eq<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_eq<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>("=", column, value);
     }
-    pub fn join_ne<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_ne<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>("!=", column, value);
     }
-    pub fn join_gt<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_gt<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>(">", column, value);
     }
-    pub fn join_lt<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_lt<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>("<", column, value);
     }
-    pub fn join_ge<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_ge<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>(">=", column, value);
     }
-    pub fn join_le<'a, U: ForeignKey<T>>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn join_le<'a, U>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self where U: ForeignKey<T> {
         return self.filter_join::<U>("<=", column, value);
     }
-    fn filter<'a>(mut self, op: &'a str, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    fn filter<'a>(
+        mut self,
+        op: &'a str,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         let clause_str;
         let dlim;
         if self.clause.is_none() {
@@ -153,22 +197,46 @@ impl<'query, T: PrimaryKeyModel> Query<'query, T> {
         );
         return self;
     }
-    pub fn where_eq<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_eq<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter("=", column, value);
     }
-    pub fn where_ne<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_ne<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter("!=", column, value);
     }
-    pub fn where_gt<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_gt<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter(">", column, value);
     }
-    pub fn where_lt<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_lt<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter("<", column, value);
     }
-    pub fn where_ge<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_ge<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter(">=", column, value);
     }
-    pub fn where_le<'a>(self, column: &'a str, value: &'query dyn rusqlite::ToSql) -> Self {
+    pub fn where_le<'a>(
+        self,
+        column: &'a str,
+        value: &'query dyn ToSql
+    ) -> Self {
         return self.filter("<=", column, value);
     }
     fn concat<'a>(mut self, word: &'a str) -> Self {
@@ -239,7 +307,7 @@ impl<'query, T: PrimaryKeyModel> Query<'query, T> {
         }
     }
 }
-pub trait JoinFK<T: PrimaryKeyModel>: ForeignKey<T> {
+pub trait JoinFK<T>: ForeignKey<T> where T: PrimaryKeyModel {
     fn join_fk(self) -> Self;
 }
 impl<'joinfk, T, U> JoinFK<U> for Query<'joinfk, U>
@@ -247,7 +315,7 @@ where
     T: PrimaryKeyModel,
     U: ForeignKey<T>,
 {
-    fn join_fk<T>(mut self) -> Self {
+    fn join_fk(mut self) -> Self {
         let join_str;
         let dlim;
         if self.join.is_none() {
