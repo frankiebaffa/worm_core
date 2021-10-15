@@ -324,6 +324,13 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         }
         return sql;
     }
+    fn flip_type(mut self) -> Self {
+        match self.query_type {
+            QueryType::Select => self.query_type = QueryType::Update,
+            QueryType::Update => self.query_type = QueryType::Select,
+        }
+        return self;
+    }
     pub fn execute(self, db: &mut impl DbCtx) -> Result<Vec<T>, WormError>{
         let mut sql = self.query_to_string();
         // get query order of parameters
@@ -353,17 +360,8 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
                 }
             },
             QueryType::Update => {
-                let id;
-                {
-                    let mut tx = c.transaction().quick_match()?;
-                    {
-                        let sp = tx.savepoint().quick_match()?;
-                        sp.execute(&sql, param).quick_match()?;
-                        id = sp.last_insert_rowid();
-                    }
-                }
-                objs = Query::<T>::select()
-                    .where_eq(T::PRIMARY_KEY, &id)
+                c.execute(&sql, param).quick_match()?;
+                objs = self.flip_type()
                     .execute(db)?;
             },
         }
