@@ -339,7 +339,6 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     }
     pub fn execute(self, db: &mut impl DbCtx) -> Result<Vec<T>, WormError>{
         let mut sql = self.query_to_string();
-        println!("{}", sql);
         // get query order of parameters
         let false_map = HashMap::new(); // always empty map to convert select keys
         let keys;
