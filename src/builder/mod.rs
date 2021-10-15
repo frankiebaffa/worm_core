@@ -80,7 +80,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     pub fn update() -> Self {
         return Query {
             query_type: QueryType::Update,
-            select: String::new(),
+            select: format!("select {}.*", T::ALIAS),
             update: format!("update {}.{}", T::DB, T::TABLE),
             set: None,
             from: format!("from {}.{} as {}", T::DB, T::TABLE, T::ALIAS),
