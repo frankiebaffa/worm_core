@@ -2,7 +2,6 @@ use {
     crate::traits::{
         primarykey::PrimaryKeyModel,
         foreignkey::ForeignKey,
-        foreignkey::ForeignKeyModel,
     },
     std::{
         collections::HashMap,
@@ -293,7 +292,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let mut rows = stmt.query(param).quick_match()?;
         let mut objs = Vec::new();
         while let Some(row) = rows.next().quick_match()? {
-            objs.push(T::from_row(row)?);
+            objs.push(T::from_row(row).quick_match()?);
         }
         return Ok(objs);
     }
@@ -307,10 +306,10 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         }
     }
 }
-pub trait JoinFK<T>: ForeignKey<T> where T: PrimaryKeyModel {
+pub trait JoinFK<T, U> where T: PrimaryKeyModel, U: ForeignKey<T> {
     fn join_fk(self) -> Self;
 }
-impl<'joinfk, T, U> JoinFK<U> for Query<'joinfk, U>
+impl<'joinfk, T, U> JoinFK<T, U> for Query<'joinfk, U>
 where
     T: PrimaryKeyModel,
     U: ForeignKey<T>,
