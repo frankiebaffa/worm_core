@@ -261,16 +261,20 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     pub fn or(self) -> Self {
         return self.concat("or");
     }
-    pub fn execute(self) -> Result<Vec<T>, WormError>{
+    pub fn query_to_string(&self) -> String {
         let mut sql = format!("{} {}", self.select, self.from);
         if self.join.is_some() {
-            let join = self.join.unwrap();
+            let join = self.join.clone().unwrap();
             sql.push_str(&format!(" {}", join));
         }
         if self.clause.is_some() {
-            let clause = self.clause.unwrap();
+            let clause = self.clause.clone().unwrap();
             sql.push_str(&format!(" {}", clause));
         }
+        return sql;
+    }
+    pub fn execute(self) -> Result<Vec<T>, WormError>{
+        let mut sql = self.query_to_string();
         // get query order of parameters
         let keys = self.params.keys();
         let mut key_indices: Vec<(usize, String)> = Vec::new();
