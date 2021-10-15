@@ -1,5 +1,6 @@
 use {
     crate::traits::{
+        dbctx::DbCtx,
         primarykey::PrimaryKeyModel,
         foreignkey::ForeignKey,
     },
@@ -273,7 +274,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         }
         return sql;
     }
-    pub fn execute(self) -> Result<Vec<T>, WormError>{
+    pub fn execute(self, db: &mut impl DbCtx) -> Result<Vec<T>, WormError>{
         let mut sql = self.query_to_string();
         // get query order of parameters
         let keys = self.params.keys();
@@ -291,7 +292,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             value_order.push(value);
         }
         let param = rusqlite::params_from_iter(value_order);
-        let c = rusqlite::Connection::open("").quick_match()?;
+        let c = db.use_connection();
         let mut stmt = c.prepare(&sql).quick_match()?;
         let mut rows = stmt.query(param).quick_match()?;
         let mut objs = Vec::new();
@@ -300,8 +301,8 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         }
         return Ok(objs);
     }
-    pub fn execute_row(self) -> Result<T, WormError> {
-        let res = self.execute()?;
+    pub fn execute_row(self, db: &mut impl DbCtx) -> Result<T, WormError> {
+        let res = self.execute(db)?;
         if res.len() == 0 {
             return Err(WormError::NoRowsError);
         } else {
