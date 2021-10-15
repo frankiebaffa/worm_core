@@ -101,8 +101,8 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let param_name = format!(":param{}", self.params.len());
         self.params.insert(param_name.clone(), Box::new(value));
         self.set = Some(format!(
-            "{}{}{}.{} = {}",
-            set, dlim, T::ALIAS, column, param_name
+            "{}{}{} = {}",
+            set, dlim, column, param_name
         ));
         return self;
     }
