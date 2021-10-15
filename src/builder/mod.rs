@@ -333,6 +333,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     }
     pub fn execute(self, db: &mut impl DbCtx) -> Result<Vec<T>, WormError>{
         let mut sql = self.query_to_string();
+        println!("{}", sql);
         // get query order of parameters
         let keys = self.params.keys();
         let mut key_indices: Vec<(usize, String)> = Vec::new();
