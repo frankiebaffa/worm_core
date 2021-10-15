@@ -46,8 +46,15 @@ impl<T> WormErrorMatch<T, SQLError> for Result<T, SQLError> {
         };
     }
 }
+enum QueryType {
+    Select,
+    Update,
+}
 pub struct Query<'query, T> {
+    query_type: QueryType,
     select: String,
+    update: String,
+    set: Option<String>,
     from: String,
     join: Option<String>,
     clause: Option<String>,
@@ -57,13 +64,47 @@ pub struct Query<'query, T> {
 impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     pub fn select() -> Self {
         return Query {
+            query_type: QueryType::Select,
             select: format!("select {}.*", T::ALIAS),
+            update: String::new(),
+            set: None,
             from: format!("from {}.{} as {}", T::DB, T::TABLE, T::ALIAS),
             join: None,
             clause: None,
             _value: None,
             params: HashMap::new(),
+        };
+    }
+    pub fn update() -> Self {
+        return Query {
+            query_type: QueryType::Update,
+            select: String::new(),
+            update: format!("update {}.{}", T::DB, T::TABLE),
+            set: None,
+            from: format!("from {}.{} as {}", T::DB, T::TABLE, T::ALIAS),
+            join: None,
+            clause: None,
+            _value: None,
+            params: HashMap::new(),
+        };
+    }
+    pub fn set<'a>(mut self, column: &'a str, value: &'query dyn ToSql) -> Self {
+        let dlim;
+        let set;
+        if self.set.is_none() {
+            set = String::new();
+            dlim = "where ";
+        } else {
+            set = self.set.unwrap();
+            dlim = ", ";
         }
+        let param_name = format!(":param{}", self.params.len());
+        self.params.insert(param_name.clone(), Box::new(value));
+        self.set = Some(format!(
+            "{}{}{}.{} = {}",
+            set, dlim, T::ALIAS, column, param_name
+        ));
+        return self;
     }
     pub fn join_pk<U: ForeignKey<T>>(mut self) -> Self {
         let join_str;
@@ -263,7 +304,16 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         return self.concat("or");
     }
     pub fn query_to_string(&self) -> String {
-        let mut sql = format!("{} {}", self.select, self.from);
+        let mut sql;
+        match self.query_type {
+            QueryType::Select => sql = format!("{} {}", self.select, self.from),
+            QueryType::Update => {
+                if self.set.is_none() {
+                    panic!("Cannot create an update statement without any set values");
+                }
+                sql = format!("{} {} {}", self.update, self.set.clone().unwrap(), self.from);
+            },
+        }
         if self.join.is_some() {
             let join = self.join.clone().unwrap();
             sql.push_str(&format!(" {}", join));
@@ -293,11 +343,29 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         }
         let param = rusqlite::params_from_iter(value_order);
         let c = db.use_connection();
-        let mut stmt = c.prepare(&sql).quick_match()?;
-        let mut rows = stmt.query(param).quick_match()?;
         let mut objs = Vec::new();
-        while let Some(row) = rows.next().quick_match()? {
-            objs.push(T::from_row(row).quick_match()?);
+        match self.query_type {
+            QueryType::Select => {
+                let mut stmt = c.prepare(&sql).quick_match()?;
+                let mut rows = stmt.query(param).quick_match()?;
+                while let Some(row) = rows.next().quick_match()? {
+                    objs.push(T::from_row(row).quick_match()?);
+                }
+            },
+            QueryType::Update => {
+                let id;
+                {
+                    let mut tx = c.transaction().quick_match()?;
+                    {
+                        let sp = tx.savepoint().quick_match()?;
+                        sp.execute(&sql, param).quick_match()?;
+                        id = sp.last_insert_rowid();
+                    }
+                }
+                objs = Query::<T>::select()
+                    .where_eq(T::PRIMARY_KEY, &id)
+                    .execute(db)?;
+            },
         }
         return Ok(objs);
     }
