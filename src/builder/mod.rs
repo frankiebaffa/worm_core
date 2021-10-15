@@ -59,7 +59,8 @@ pub struct Query<'query, T> {
     join: Option<String>,
     clause: Option<String>,
     _value: Option<T>,
-    params: HashMap<String, Box<&'query dyn ToSql>>,
+    select_params: HashMap<String, Box<&'query dyn ToSql>>,
+    update_params: HashMap<String, Box<&'query dyn ToSql>>,
 }
 impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
     pub fn select() -> Self {
@@ -72,7 +73,8 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             join: None,
             clause: None,
             _value: None,
-            params: HashMap::new(),
+            select_params: HashMap::new(),
+            update_params: HashMap::new(),
         };
     }
     pub fn update() -> Self {
@@ -85,7 +87,8 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             join: None,
             clause: None,
             _value: None,
-            params: HashMap::new(),
+            select_params: HashMap::new(),
+            update_params: HashMap::new(),
         };
     }
     pub fn set<'a>(mut self, column: &'a str, value: &'query dyn ToSql) -> Self {
@@ -98,8 +101,9 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             set = self.set.unwrap();
             dlim = ", ";
         }
-        let param_name = format!(":param{}", self.params.len());
-        self.params.insert(param_name.clone(), Box::new(value));
+        let param_num = self.select_params.len() + self.update_params.len();
+        let param_name = format!(":param{}", param_num);
+        self.update_params.insert(param_name.clone(), Box::new(value));
         self.set = Some(format!(
             "{}{}{} = {}",
             set, dlim, column, param_name
@@ -157,8 +161,9 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             join_str = self.join.unwrap();
             dlim = String::from(" ");
         }
-        let param_name = format!(":param{}", self.params.len());
-        self.params.insert(param_name.clone(), Box::new(value));
+        let param_num = self.select_params.len() + self.update_params.len();
+        let param_name = format!(":param{}", param_num);
+        self.select_params.insert(param_name.clone(), Box::new(value));
         self.join = Some(
             format!(
                 "{}{}{}.{} {} {}",
@@ -226,8 +231,9 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
             clause_str = self.clause.unwrap();
             dlim = String::from(" ");
         }
-        let param_name = format!(":param{}", self.params.len());
-        self.params.insert(param_name.clone(), Box::new(value));
+        let param_num = self.select_params.len() + self.update_params.len();
+        let param_name = format!(":param{}", param_num);
+        self.select_params.insert(param_name.clone(), Box::new(value));
         self.clause = Some(
             format!(
                 "{}{}{}.{} {} {}",
@@ -335,7 +341,18 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let mut sql = self.query_to_string();
         println!("{}", sql);
         // get query order of parameters
-        let keys = self.params.keys();
+        let false_map = HashMap::new(); // always empty map to convert select keys
+        let keys;
+        let select_keys = self.select_params.keys();
+        match self.query_type {
+            QueryType::Select => {
+                keys = select_keys.chain(false_map.keys());
+            }
+            QueryType::Update => {
+                let update_keys = self.update_params.keys();
+                keys = select_keys.chain(update_keys);
+            },
+        }
         let mut key_indices: Vec<(usize, String)> = Vec::new();
         for key in keys {
             let index = sql.find(key).unwrap();
@@ -346,7 +363,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let mut value_order = Vec::new();
         for key_index in key_indices {
             let key = key_index.1;
-            let value = self.params.get(&key).unwrap();
+            let value = self.select_params.get(&key).unwrap();
             value_order.push(value);
         }
         let param = rusqlite::params_from_iter(value_order);
