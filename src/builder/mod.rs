@@ -93,7 +93,7 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let set;
         if self.set.is_none() {
             set = String::new();
-            dlim = "where ";
+            dlim = "set ";
         } else {
             set = self.set.unwrap();
             dlim = ", ";
