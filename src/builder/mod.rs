@@ -363,7 +363,10 @@ impl<'query, T> Query<'query, T> where T: PrimaryKeyModel {
         let mut value_order = Vec::new();
         for key_index in key_indices {
             let key = key_index.1;
-            let value = self.select_params.get(&key).unwrap();
+            let value = match self.select_params.get(&key) {
+                Some(value) => value,
+                None => self.update_params.get(&key).unwrap(),
+            };
             value_order.push(value);
         }
         let param = rusqlite::params_from_iter(value_order);
