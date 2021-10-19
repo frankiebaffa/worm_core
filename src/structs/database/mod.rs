@@ -22,7 +22,6 @@ impl DbContext {
     pub fn attach_temp_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
             let attach = format!("attach ':memory:' as {}", db.name);
-            println!("{}", attach);
             match self.connection.execute(&attach, []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
@@ -32,7 +31,6 @@ impl DbContext {
     pub fn attach_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
             let attach = format!("attach '{}' as {}", db.path, db.name);
-            println!("{}", attach);
             match self.connection.execute(&attach, []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
