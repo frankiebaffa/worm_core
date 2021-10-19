@@ -7,6 +7,9 @@ impl DbObject {
     pub fn new<'a>(path: &'a str, name: &'a str) -> DbObject {
         return DbObject { path: path.to_string(), name: name.to_string(), };
     }
+    pub fn get_items(&self) -> (String, String) {
+        return (self.path.clone(), self.name.clone());
+    }
 }
 pub struct DbContext {
     connection: Connection,
@@ -34,5 +37,12 @@ impl DbContext {
                 Err(e) => panic!("{}", e),
             }
         });
+    }
+    pub fn get_all_items(self) -> Vec<(String, String)> {
+        let mut items = Vec::new();
+        self.databases.into_iter().for_each(|database| {
+            items.push(database.get_items());
+        });
+        return items;
     }
 }
