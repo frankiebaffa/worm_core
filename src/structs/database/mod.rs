@@ -7,9 +7,6 @@ impl DbObject {
     pub fn new<'a>(path: &'a str, name: &'a str) -> DbObject {
         return DbObject { path: path.to_string(), name: name.to_string(), };
     }
-    pub fn get_items(&self) -> (String, String) {
-        return (self.path.clone(), self.name.clone());
-    }
 }
 pub struct DbContext {
     connection: Connection,
@@ -24,7 +21,9 @@ impl DbContext {
     }
     pub fn attach_temp_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
-            match self.connection.execute(&format!("attach ':memory:' as {}", db.name), []) {
+            let attach = format!("attach ':memory:' as {}", db.name);
+            println!("{}", attach);
+            match self.connection.execute(&attach, []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
             }
@@ -32,17 +31,12 @@ impl DbContext {
     }
     pub fn attach_dbs(&mut self) {
         self.databases.iter().for_each(|db| {
-            match self.connection.execute(&format!("attach '{}' as {}", db.path, db.name), []) {
+            let attach = format!("attach '{}' as {}", db.path, db.name);
+            println!("{}", attach);
+            match self.connection.execute(&attach, []) {
                 Ok(_) => {},
                 Err(e) => panic!("{}", e),
             }
         });
-    }
-    pub fn get_all_items(self) -> Vec<(String, String)> {
-        let mut items = Vec::new();
-        self.databases.into_iter().for_each(|database| {
-            items.push(database.get_items());
-        });
-        return items;
     }
 }
