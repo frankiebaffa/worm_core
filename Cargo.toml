@@ -1,6 +1,6 @@
 [package]
-name = "worm"
-version = "0.1.0"
+name = "worm_core"
+version = "0.1.1"
 edition = "2018"
 
 [dependencies]
