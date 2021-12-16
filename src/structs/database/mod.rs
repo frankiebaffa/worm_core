@@ -1,4 +1,8 @@
 use rusqlite::Connection;
+use std::{
+    fs::remove_file,
+    path::Path,
+};
 pub struct DbObject {
     path: String,
     name: String,
@@ -36,5 +40,18 @@ impl DbContext {
                 Err(e) => panic!("{}", e),
             }
         });
+    }
+    pub fn delete_db_files(&self) -> Result<(), String> {
+        for db in self.databases.iter() {
+            let path_str = db.path.clone();
+            let path = Path::new(&path_str);
+            if path.exists() {
+                match remove_file(path) {
+                    Ok(_) => {},
+                    Err(e) => return Err(format!("{}", e)),
+                };
+            }
+        }
+        Ok(())
     }
 }
